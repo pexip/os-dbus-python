@@ -1,0 +1,2 @@
+# We no longer run setup.py, and d/clean deletes it
+uses-python-distutils [setup.py:*]
