@@ -1,8 +1,9 @@
 Source: dbus-python
 Section: devel
 Priority: optional
-Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
-Uploaders:
+Maintainer: Pexip AS <packaging@pexip.com>
+XSBC-Pexip-Original-Maintainer: Utopia Maintenance Team <pkg-utopia-maintainers@lists.alioth.debian.org>
+XSBC-Pexip-Original-Uploaders:
  Sjoerd Simons <sjoerd@debian.org>,
  Sebastian Dröge <slomo@debian.org>,
  Simon McVittie <smcv@debian.org>,
@@ -30,6 +31,7 @@ Homepage: https://www.freedesktop.org/wiki/Software/DBusBindings#Python
 Vcs-Git: https://salsa.debian.org/debian/dbus-python.git
 Vcs-Browser: https://salsa.debian.org/debian/dbus-python
 Testsuite: autopkgtest-pkg-python
+XS-Pexip-Upstream: http://deb.debian.org/debian/ bookworm
 
 Package: python-dbus-dev
 Section: python
