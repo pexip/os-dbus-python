@@ -1,3 +1,30 @@
+dbus-python (1.4.0-1) unstable; urgency=medium
+
+  * New upstream release
+  * d/copyright: Update
+  * d/rules: Update the option used to enable/disable documentation
+  * d/gbp.conf: Update packaging branch to debian/latest
+  * d/clean: Fix FTBFS when built twice in a row by deleting
+    debian/tmp-indep (Closes: #1044812)
+  * d/salsa-ci.yml: Use recommended recipe URL
+  * d/salsa-ci.yml: Don't attempt cross-building.
+    The build-dependencies are known not to be satisfiable for this
+    particular package right now.
+  * d/upstream/metadata: Add Security-Contact field
+  * Update lintian overrides
+  * Standards-Version: 4.7.2 (no changes required)
+
+ -- Simon McVittie <smcv@debian.org>  Thu, 13 Mar 2025 18:38:15 +0000
+
+dbus-python (1.3.2-5) unstable; urgency=medium
+
+  * d/rules: Set DEB_PYTHON_INSTALL_LAYOUT=deb.
+    This avoids newer Meson versions trying to install into /usr/local.
+    Mitigates: #1041537
+  * Remove version constraints unnecessary since Debian 11
+
+ -- Simon McVittie <smcv@debian.org>  Wed, 26 Jul 2023 11:34:51 +0100
+
 dbus-python (1.3.2-4+pexip24u2) pexip; urgency=medium
 
   * Rebuild for move to main

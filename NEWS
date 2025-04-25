@@ -1,3 +1,61 @@
+dbus Python Bindings 1.4.0 (2025-03-13)
+=======================================
+
+Build-time configuration changes:
+
+* When building with Meson, the doc and tests options are now features.
+  Documentation is still disabled by default: use -Ddoc=enabled to
+  enable it, or -Ddoc=auto to enable it conditionally if the requireds
+  packages are present.
+  Tests are enabled by default if their prerequisites are present, but
+  may run a subset of tests if some of the prerequisites are missing.
+  Use -Dtests=enabled to check for all prerequisites for full test
+  coverage, or -Dtests=disabled to avoid building any tests.
+
+* Autotools-generated files are no longer included in the tarball release.
+  The Autotools build system is likely to be removed in a future dbus-python
+  release, so Autotools users should migrate to Meson as soon as possible.
+  It is still possible to build using Autotools, by following the same
+  procedure as for a git clone (starting with the `./autogen.sh` script).
+  This requires autoconf, automake, libtool and autoconf-archive.
+
+Dependencies:
+
+* Installing from source code using Meson requires Meson 0.60 or later.
+
+* An upstream-supported Python version (currently 3.9 or later) is strongly
+  recommended, and a future version of dbus-python is likely to require
+  Python 3.9 or later.
+
+Enhancements:
+
+* Automatically set the NO_REPLY message flag in call_async if there
+  is no reply handler and no error handler (dbus-python!22, Mihai Dumitru)
+
+* Add arg0namespace match rule support (dbus-python!27, Jeroen Hofstee)
+
+* Add argNpath match rules support (dbus-python!24, Jeroen Hofstee)
+
+* Generate a valid sdist from `meson dist` (Simon McVittie)
+
+* Mention more alternatives to this package in the README (Simon McVittie)
+
+Fixes:
+
+* Don't require tomllib when generating dist tarball on Python ≥ 3.11
+  (dbus-python#54, Timo Gurr)
+
+* Fix compilation with Python ≥ 3.13 in some situations
+  (dbus-python!28, Miro Hrončok)
+
+* Avoid using distutils in setup.py (Simon McVittie)
+
+* Fix a typo in example code (dbus-python!25, Robert Ancell)
+
+* Safer handling of weak references (Simon McVittie)
+
+* CI fixes (Simon McVittie)
+
 dbus Python Bindings 1.3.2 (2022-09-06)
 =======================================
 

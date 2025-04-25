@@ -150,7 +150,8 @@ DBusPyConnection_GetObjectPathHandlers(PyObject *self, PyObject *path)
 PyObject *
 DBusPyConnection_ExistingFromDBusConnection(DBusConnection *conn)
 {
-    PyObject *self, *ref;
+    PyObject *self = NULL;
+    PyObject *ref;
 
     Py_BEGIN_ALLOW_THREADS
     ref = (PyObject *)dbus_connection_get_data(conn,
@@ -158,15 +159,15 @@ DBusPyConnection_ExistingFromDBusConnection(DBusConnection *conn)
     Py_END_ALLOW_THREADS
     if (ref) {
         DBG("(DBusConnection *)%p has weak reference at %p", conn, ref);
-        self = PyWeakref_GetObject(ref);   /* still a borrowed ref */
+        if (PyWeakref_GetRef(ref, &self) < 0) {
+            return NULL;
+        }
         if (self && self != Py_None && DBusPyConnection_Check(self)) {
             DBG("(DBusConnection *)%p has weak reference at %p pointing to %p",
                 conn, ref, self);
-            TRACE(self);
-            Py_INCREF(self);
-            TRACE(self);
             return self;
         }
+        Py_CLEAR(self);
     }
 
     PyErr_SetString(PyExc_AssertionError,
@@ -198,17 +199,21 @@ DBusPyConnection_NewConsumingDBusConnection(PyTypeObject *cls,
                                                _connection_python_slot);
     Py_END_ALLOW_THREADS
     if (ref) {
-        self = (Connection *)PyWeakref_GetObject(ref);
+        PyObject *obj = NULL;
+        if (PyWeakref_GetRef(ref, &obj) < 0) {
+            return NULL;
+        }
         ref = NULL;
-        if (self && (PyObject *)self != Py_None) {
-            self = NULL;
+        if (obj && obj != Py_None) {
             PyErr_SetString(PyExc_AssertionError,
                             "Newly created D-Bus connection already has a "
                             "Connection instance associated with it");
             DBG("%s() fail - assertion failed, DBusPyConn has a DBusConn already", __func__);
             DBG_WHEREAMI;
+            Py_CLEAR(obj);
             return NULL;
         }
+        Py_CLEAR(obj);
     }
     ref = NULL;
 
@@ -233,7 +238,9 @@ DBusPyConnection_NewConsumingDBusConnection(PyTypeObject *cls,
     self->has_mainloop = (mainloop != Py_None);
     self->conn = NULL;
     self->filters = PyList_New(0);
+#if !DBUSPY_PY_VERSION_AT_LEAST(3, 12, 0, 0)
     self->weaklist = NULL;
+#endif
     if (!self->filters) goto err;
     self->object_paths = PyDict_New();
     if (!self->object_paths) goto err;
@@ -387,7 +394,10 @@ static void Connection_tp_dealloc(Connection *self)
     /* avoid clobbering any pending exception */
     PyErr_Fetch(&et, &ev, &etb);
 
-    if (self->weaklist) {
+#if !DBUSPY_PY_VERSION_AT_LEAST(3, 12, 0, 0)
+    if (self->weaklist)
+#endif
+    {
         PyObject_ClearWeakRefs((PyObject *)self);
     }
 
@@ -450,12 +460,19 @@ PyTypeObject DBusPyConnection_Type = {
     0,                      /*tp_getattro*/
     0,                      /*tp_setattro*/
     0,                      /*tp_as_buffer*/
+#if DBUSPY_PY_VERSION_AT_LEAST(3, 12, 0, 0)
+    Py_TPFLAGS_MANAGED_WEAKREF |
+#endif
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
     Connection_tp_doc,      /*tp_doc*/
     0,                      /*tp_traverse*/
     0,                      /*tp_clear*/
     0,                      /*tp_richcompare*/
+#if DBUSPY_PY_VERSION_AT_LEAST(3, 12, 0, 0)
+    0,                      /*tp_weaklistoffset*/
+#else
     offsetof(Connection, weaklist),   /*tp_weaklistoffset*/
+#endif
     0,                      /*tp_iter*/
     0,                      /*tp_iternext*/
     DBusPyConnection_tp_methods,  /*tp_methods*/

@@ -38,8 +38,10 @@ typedef struct {
     /* The Connection subtype for which this Server is a factory */
     PyObject *conn_class;
 
+#if !DBUSPY_PY_VERSION_AT_LEAST(3, 12, 0, 0)
     /* Weak-references list to make server weakly referenceable */
     PyObject *weaklist;
+#endif
 
     PyObject *mainloop;
 } Server;
@@ -159,7 +161,8 @@ finally:
 static PyObject *
 DBusPyServer_ExistingFromDBusServer(DBusServer *server)
 {
-    PyObject *self, *ref;
+    PyObject *self = NULL;
+    PyObject *ref;
 
     Py_BEGIN_ALLOW_THREADS
     ref = (PyObject *)dbus_server_get_data(server,
@@ -167,15 +170,15 @@ DBusPyServer_ExistingFromDBusServer(DBusServer *server)
     Py_END_ALLOW_THREADS
     if (ref) {
         DBG("(DBusServer *)%p has weak reference at %p", server, ref);
-        self = PyWeakref_GetObject(ref);   /* still a borrowed ref */
+        if (PyWeakref_GetRef(ref, &self) < 0) {
+            return NULL;
+        }
         if (self && self != Py_None && DBusPyServer_Check(self)) {
             DBG("(DBusServer *)%p has weak reference at %p pointing to %p",
                 server, ref, self);
-            TRACE(self);
-            Py_INCREF(self);
-            TRACE(self);
             return self;
         }
+        Py_CLEAR(self);
     }
 
     PyErr_SetString(PyExc_AssertionError,
@@ -262,17 +265,21 @@ DBusPyServer_NewConsumingDBusServer(PyTypeObject *cls,
                                            _server_python_slot);
     Py_END_ALLOW_THREADS
     if (ref) {
-        self = (Server *)PyWeakref_GetObject(ref);
+        PyObject *obj = NULL;
+        if (PyWeakref_GetRef(ref, &obj) < 0) {
+            return NULL;
+        }
         ref = NULL;
-        if (self && (PyObject *)self != Py_None) {
-            self = NULL;
+        if (obj && obj != Py_None) {
             PyErr_SetString(PyExc_AssertionError,
                             "Newly created D-Bus server already has a "
                             "Server instance associated with it");
             DBG("%s() fail - assertion failed, DBusPyServer has a DBusServer already", __func__);
             DBG_WHEREAMI;
+            Py_CLEAR(obj);
             return NULL;
         }
+        Py_CLEAR(obj);
     }
     ref = NULL;
 
@@ -418,7 +425,9 @@ Server_tp_new(PyTypeObject *cls, PyObject *args, PyObject *kwargs)
         return NULL;
     }
 
+#if !DBUSPY_PY_VERSION_AT_LEAST(3, 12, 0, 0)
     ((Server *)self)->weaklist = NULL;
+#endif
     TRACE(self);
 
     return self;
@@ -433,7 +442,10 @@ static void Server_tp_dealloc(Server *self)
     /* avoid clobbering any pending exception */
     PyErr_Fetch(&et, &ev, &etb);
 
-    if (self->weaklist) {
+#if !DBUSPY_PY_VERSION_AT_LEAST(3, 12, 0, 0)
+    if (self->weaklist)
+#endif
+    {
         PyObject_ClearWeakRefs((PyObject *)self);
     }
 
@@ -565,12 +577,19 @@ PyTypeObject DBusPyServer_Type = {
     0,                      /*tp_getattro*/
     0,                      /*tp_setattro*/
     0,                      /*tp_as_buffer*/
+#if DBUSPY_PY_VERSION_AT_LEAST(3, 12, 0, 0)
+    Py_TPFLAGS_MANAGED_WEAKREF |
+#endif
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
     Server_tp_doc,          /*tp_doc*/
     0,                      /*tp_traverse*/
     0,                      /*tp_clear*/
     0,                      /*tp_richcompare*/
+#if DBUSPY_PY_VERSION_AT_LEAST(3, 12, 0, 0)
+    0,                      /*tp_weaklistoffset*/
+#else
     offsetof(Server, weaklist),   /*tp_weaklistoffset*/
+#endif
     0,                      /*tp_iter*/
     0,                      /*tp_iternext*/
     DBusPyServer_tp_methods,/*tp_methods*/

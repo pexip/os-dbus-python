@@ -75,6 +75,11 @@ assert (_dbus_bindings._python_version & 0xffff0000
 logger.info('dbus found at %r', dbus.__file__)
 logger.info('_dbus_bindings found at %r', _dbus_bindings.__file__)
 
+
+def ignore_cb(*args, **kws):
+    pass
+
+
 def uni(x):
     """Return a Unicode string consisting of the single Unicode character
     with the given codepoint (represented as a surrogate pair if this is
@@ -569,7 +574,6 @@ class TestMatching(unittest.TestCase):
         from dbus.connection import SignalMatch
         self._message = SignalMessage('/', 'a.b', 'c')
         class FakeConn(object): pass
-        def ignore_cb(*args, **kws): pass
         self._match = SignalMatch(FakeConn(), None, '/', None, None, 
                                   ignore_cb, arg0='/')
 
@@ -580,6 +584,105 @@ class TestMatching(unittest.TestCase):
     def test_object_path_no_match(self):
         self._message.append('/', signature='o')
         self.assertFalse(self._match.maybe_handle_message(self._message))
+
+class TestArg0Namespace(unittest.TestCase):
+    def setUp(self):
+        self._match = dbus.connection.SignalMatch(object, None, '/', None, None,
+                                  ignore_cb, arg0namespace='org.freedesktop.dbus-python')
+
+    def test_invalid_arg1namespace(self):
+        try:
+            dbus.connection.SignalMatch(object, None, '/', None, None,
+                                  ignore_cb, arg1namespace='org.freedesktop.dbus-python')
+        except TypeError:
+            pass
+        else:
+            raise AssertionError('arg1namespace is not a valid keyword argument')
+
+    def test_namespace_match(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('org.freedesktop.dbus-python', signature='s')
+        self.assertTrue(self._match.maybe_handle_message(message))
+
+    def test_namespace_match2(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('org.freedesktop.dbus-python.test', signature='s')
+        self.assertTrue(self._match.maybe_handle_message(message))
+
+    def test_namespace_mismatch(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('org.freedesktop.dbus-python-test', signature='s')
+        self.assertFalse(self._match.maybe_handle_message(message))
+
+    def test_namespace_type_mismatch(self):
+        match = dbus.connection.SignalMatch(object, None, '/', None, None,
+                                  ignore_cb, arg0namespace='1')
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append(1, signature='i')
+        self.assertFalse(match.maybe_handle_message(message))
+
+class TestPathMatches(unittest.TestCase):
+    def setUp(self):
+        self._match = dbus.connection.SignalMatch(object, None, '/', None, None,
+                                  ignore_cb, arg0path='/aa/bb/')
+
+    def test_empty_path(self):
+
+        match = dbus.connection.SignalMatch(object, None, '/', None, None,
+                                  ignore_cb, arg0path='')
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/', signature='s')
+        self.assertFalse(match.maybe_handle_message(message))
+
+    def test_empty_value(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('', signature='s')
+        self.assertFalse(self._match.maybe_handle_message(message))
+
+    def test_root(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/', signature='s')
+        self.assertTrue(self._match.maybe_handle_message(message))
+
+    def test_aa(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/aa/', signature='s')
+        self.assertTrue(self._match.maybe_handle_message(message))
+
+    def test_aa_bb(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/aa/bb/', signature='s')
+        self.assertTrue(self._match.maybe_handle_message(message))
+
+    def test_aa_bb_cc(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/aa/bb/cc/', signature='s')
+        self.assertTrue(self._match.maybe_handle_message(message))
+
+    def test_aa_bb_cc2(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/aa/bb/cc', signature='s')
+        self.assertTrue(self._match.maybe_handle_message(message))
+
+    def test_no_match_aa_b(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/aa/b', signature='s')
+        self.assertFalse(self._match.maybe_handle_message(message))
+
+    def test_no_match_aa(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/aa', signature='s')
+        self.assertFalse(self._match.maybe_handle_message(message))
+
+    def test_no_match_aa_bb(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/aa/bb', signature='s')
+        self.assertFalse(self._match.maybe_handle_message(message))
+
+    def test_object_path(self):
+        message = _dbus_bindings.SignalMessage('/', 'a.b', 'c')
+        message.append('/aa/bb/cc', signature='o')
+        self.assertTrue(self._match.maybe_handle_message(message))
 
 class TestVersion(unittest.TestCase):
     if sys.version_info[:2] < (2, 7):
