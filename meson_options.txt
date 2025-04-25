@@ -3,8 +3,9 @@
 
 option(
   'doc',
-  type: 'boolean',
-  value: false,
+  type: 'feature',
+  value: 'disabled',
+  deprecated: {'true': 'enabled', 'false': 'disabled'},
   description: 'Enable documentation',
 )
 
@@ -31,7 +32,8 @@ option(
 
 option(
   'tests',
-  type: 'boolean',
-  value: true,
+  type: 'feature',
+  value: 'auto',
+  deprecated: {'true': 'auto', 'false': 'disabled'},
   description: 'Enable unit tests',
 )

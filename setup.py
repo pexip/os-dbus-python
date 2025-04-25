@@ -25,8 +25,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-from distutils.dir_util import copy_tree, mkpath
-from distutils.file_util import copy_file
 from setuptools.dist import Distribution
 from setuptools import setup, Extension
 import os
@@ -69,7 +67,7 @@ class Build(Distribution().get_command_class('build')):
     def run(self):
         srcdir = os.getcwd()
         builddir = os.path.join(srcdir, self.build_temp)
-        mkpath(builddir)
+        os.makedirs(builddir, exist_ok=True)
 
         if use_autotools:
             configure = os.path.join(srcdir, 'configure')
@@ -98,12 +96,12 @@ class Build(Distribution().get_command_class('build')):
                     sys.executable,
                     '-m', 'mesonbuild.mesonmain',
                     '--prefix=' + os.path.join(builddir, 'prefix'),
-                    '-Ddoc=false',
+                    '-Ddoc=disabled',
                     '-Dinstalled_tests=false',
                     '-Dpython=' + sys.executable,
                     '-Dpython.platlibdir=' + os.path.join(srcdir, self.build_lib),
                     '-Dpython.purelibdir=' + os.path.join(srcdir, self.build_lib),
-                    '-Dtests=false',
+                    '-Dtests=disabled',
                     srcdir,
                     builddir,
                 ]
